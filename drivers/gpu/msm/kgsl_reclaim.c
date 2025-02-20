@@ -266,6 +266,13 @@ static u32 kgsl_reclaim_process(struct kgsl_process_private *process,
 			continue;
 		}
 
+		/* Do not reclaim pages mapped into a VBO */
+		if (atomic_read(&valid_entry->vbo_count)) {
+			kgsl_mem_entry_put(entry);
+			next++;
+			continue;
+		}
+
 		if ((atomic_read(&process->unpinned_page_count) +
 			memdesc->page_count) > kgsl_reclaim_max_page_limit) {
 			kgsl_mem_entry_put(entry);

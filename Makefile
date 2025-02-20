@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 VERSION = 5
 PATCHLEVEL = 10
-SUBLEVEL = 177
+SUBLEVEL = 209
 EXTRAVERSION =
 NAME = Dare mighty things
 
@@ -534,6 +534,72 @@ KBUILD_CFLAGS_MODULE  := -DMODULE
 KBUILD_LDFLAGS_MODULE :=
 KBUILD_LDFLAGS :=
 CLANG_FLAGS :=
+# For use when analysis needs to call subshell with CC before cc-wrapper is built.
+NO_WRAPPER_CC := $(CC)
+
+
+# ifdef OPLUS_BUG_STABILITY
+KBUILD_CFLAGS +=   -DOPLUS_BUG_STABILITY
+KBUILD_CPPFLAGS += -DOPLUS_BUG_STABILITY
+CFLAGS_KERNEL +=   -DOPLUS_BUG_STABILITY
+CFLAGS_MODULE +=   -DOPLUS_BUG_STABILITY
+# endif
+
+$(warning MSM_ARCH: -$(MSM_ARCH)-)
+ifneq ("$(MSM_ARCH)X", "waipio_tuivmX")
+# ifdef OPLUS_FEATURE_CHG_BASIC
+KBUILD_CFLAGS +=   -DOPLUS_FEATURE_CHG_BASIC
+KBUILD_CPPFLAGS += -DOPLUS_FEATURE_CHG_BASIC
+CFLAGS_KERNEL +=   -DOPLUS_FEATURE_CHG_BASIC
+CFLAGS_MODULE +=   -DOPLUS_FEATURE_CHG_BASIC
+# endif
+endif
+
+# ifdef OPLUS_FEATURE_DISPLAY
+# add OPLUS_FEATURE_DISPLAY
+KBUILD_CFLAGS +=   -DOPLUS_FEATURE_DISPLAY
+KBUILD_CPPFLAGS += -DOPLUS_FEATURE_DISPLAY
+CFLAGS_KERNEL +=   -DOPLUS_FEATURE_DISPLAY
+CFLAGS_MODULE +=   -DOPLUS_FEATURE_DISPLAY
+# endif
+
+# ifdef OPLUS_FEATURE_CAMERA_COMMON
+KBUILD_CFLAGS +=   -DOPLUS_FEATURE_CAMERA_COMMON
+KBUILD_CPPFLAGS += -DOPLUS_FEATURE_CAMERA_COMMON
+CFLAGS_KERNEL +=   -DOPLUS_FEATURE_CAMERA_COMMON
+CFLAGS_MODULE +=   -DOPLUS_FEATURE_CAMERA_COMMON
+# endif
+
+#ifdef OPLUS_FEATURE_WIFI_BDF
+KBUILD_CFLAGS +=   -DOPLUS_FEATURE_WIFI_BDF
+KBUILD_CPPFLAGS += -DOPLUS_FEATURE_WIFI_BDF
+CFLAGS_KERNEL +=   -DOPLUS_FEATURE_WIFI_BDF
+CFLAGS_MODULE +=   -DOPLUS_FEATURE_WIFI_BDF
+
+KBUILD_CFLAGS +=   -DOPLUS_FEATURE_WIFI_MAC
+KBUILD_CPPFLAGS += -DOPLUS_FEATURE_WIFI_MAC
+CFLAGS_KERNEL +=   -DOPLUS_FEATURE_WIFI_MAC
+CFLAGS_MODULE +=   -DOPLUS_FEATURE_WIFI_MAC
+
+KBUILD_CFLAGS +=   -DOPLUS_FEATURE_WIFI_WSA
+KBUILD_CPPFLAGS += -DOPLUS_FEATURE_WIFI_WSA
+CFLAGS_KERNEL +=   -DOPLUS_FEATURE_WIFI_WSA
+CFLAGS_MODULE +=   -DOPLUS_FEATURE_WIFI_WSA
+#endif /* OPLUS_FEATURE_WIFI_BDF */
+
+#ifdef OPLUS_FEATURE_WIFI_DCS_SWITCH
+KBUILD_CFLAGS +=   -DOPLUS_FEATURE_WIFI_DCS_SWITCH
+KBUILD_CPPFLAGS += -DOPLUS_FEATURE_WIFI_DCS_SWITCH
+CFLAGS_KERNEL +=   -DOPLUS_FEATURE_WIFI_DCS_SWITCH
+CFLAGS_MODULE +=   -DOPLUS_FEATURE_WIFI_DCS_SWITCH
+# endif /* OPLUS_FEATURE_WIFI_DCS_SWITCH */
+
+#ifdef OPLUS_FEATURE_SOFTAP_DCS_SWITCH
+KBUILD_CFLAGS +=   -DOPLUS_FEATURE_SOFTAP_DCS_SWITCH
+KBUILD_CPPFLAGS += -DOPLUS_FEATURE_SOFTAP_DCS_SWITCH
+CFLAGS_KERNEL +=   -DOPLUS_FEATURE_SOFTAP_DCS_SWITCH
+CFLAGS_MODULE +=   -DOPLUS_FEATURE_SOFTAP_DCS_SWITCH
+#endif /* OPLUS_FEATURE_SOFTAP_DCS_SWITCH */
 
 CC := scripts/basic/cc-wrapper $(CC)
 
@@ -550,6 +616,7 @@ export KBUILD_AFLAGS AFLAGS_KERNEL AFLAGS_MODULE
 export KBUILD_AFLAGS_MODULE KBUILD_CFLAGS_MODULE KBUILD_LDFLAGS_MODULE
 export KBUILD_AFLAGS_KERNEL KBUILD_CFLAGS_KERNEL
 export PAHOLE_FLAGS
+export NO_WRAPPER_CC
 
 # Files to ignore in find ... statements
 
@@ -592,7 +659,8 @@ ifdef building_out_of_srctree
 	{ echo "# this is build directory, ignore it"; echo "*"; } > .gitignore
 endif
 
-ifneq ($(shell $(CC) --version 2>&1 | head -n 1 | grep clang),)
+# cc-wrapper may not yet be compiled, use NO_WRAPPER_CC.
+ifneq ($(shell $(NO_WRAPPER_CC) --version 2>&1 | head -n 1 | grep clang),)
 ifneq ($(CROSS_COMPILE),)
 CLANG_FLAGS	+= --target=$(notdir $(CROSS_COMPILE:%-=%))
 GCC_TOOLCHAIN_DIR := $(dir $(shell which $(CROSS_COMPILE)elfedit))
@@ -602,8 +670,10 @@ endif
 ifneq ($(GCC_TOOLCHAIN),)
 CLANG_FLAGS	+= --gcc-toolchain=$(GCC_TOOLCHAIN)
 endif
-ifneq ($(LLVM_IAS),1)
-CLANG_FLAGS	+= -no-integrated-as
+ifeq ($(LLVM_IAS),1)
+CLANG_FLAGS	+= -fintegrated-as
+else
+CLANG_FLAGS	+= -fno-integrated-as
 endif
 CLANG_FLAGS	+= -Werror=unknown-warning-option
 KBUILD_CFLAGS	+= $(CLANG_FLAGS)
@@ -833,6 +903,10 @@ endif
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
 
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
+
+# These result in bogus false positives
+KBUILD_CFLAGS += $(call cc-disable-warning, dangling-pointer)
+
 ifdef CONFIG_FRAME_POINTER
 KBUILD_CFLAGS	+= -fno-omit-frame-pointer -fno-optimize-sibling-calls
 else
@@ -853,11 +927,11 @@ endif
 
 # Initialize all stack variables with a zero value.
 ifdef CONFIG_INIT_STACK_ALL_ZERO
+# Future support for zero initialization is still being debated, see
+# https://bugs.llvm.org/show_bug.cgi?id=45497. These flags are subject to being
+# renamed or dropped.
 KBUILD_CFLAGS	+= -ftrivial-auto-var-init=zero
-ifdef CONFIG_CC_HAS_AUTO_VAR_INIT_ZERO_ENABLER
-# https://github.com/llvm/llvm-project/issues/44842
 KBUILD_CFLAGS	+= -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang
-endif
 endif
 
 DEBUG_CFLAGS	:=
@@ -876,7 +950,7 @@ else
 DEBUG_CFLAGS	+= -g
 endif
 
-ifeq ($(LLVM_IAS),1)
+ifdef CONFIG_AS_IS_LLVM
 KBUILD_AFLAGS	+= -g
 else
 KBUILD_AFLAGS	+= -Wa,-gdwarf-2
@@ -1448,11 +1522,15 @@ endif
 # needs to be updated, so this check is forced on all builds
 
 uts_len := 64
-ifneq (,$(BUILD_NUMBER))
-	UTS_RELEASE=$(KERNELRELEASE)-ab$(BUILD_NUMBER)
-else
+
+#ifdef OPLUS_FEATURE_BUILD
+#ifneq (,$(BUILD_NUMBER))
+#	UTS_RELEASE=$(KERNELRELEASE)-ab$(BUILD_NUMBER)
+#else
 	UTS_RELEASE=$(KERNELRELEASE)
-endif
+#endif
+#endif OPLUS_FEATURE_BUILD
+
 define filechk_utsrelease.h
 	if [ `echo -n "$(UTS_RELEASE)" | wc -c ` -gt $(uts_len) ]; then \
 		echo '"$(UTS_RELEASE)" exceeds $(uts_len) characters' >&2;    \

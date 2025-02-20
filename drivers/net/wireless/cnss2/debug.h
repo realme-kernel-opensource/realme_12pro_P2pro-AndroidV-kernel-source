@@ -7,6 +7,13 @@
 
 #include <linux/printk.h>
 
+
+//#ifdef CONFIG_OPLUS_FEATURE_OPROJECT
+//modify for: close bug in user build
+#include <soc/oplus/system/oplus_project.h>
+//#endif /* CONFIG_OPLUS_FEATURE_OPROJECT */
+
+
 enum log_level {
 	EMERG_LOG = 0,
 	ALERT_LOG = 1,
@@ -21,6 +28,7 @@ enum log_level {
 };
 
 extern enum log_level cnss_kernel_log_level;
+
 
 #if IS_ENABLED(CONFIG_IPC_LOGGING)
 #include <linux/ipc_logging.h>
@@ -86,13 +94,20 @@ extern enum log_level cnss_ipc_log_level;
 		}							\
 	} while (0)
 #else
+//#ifndef CONFIG_OPLUS_FEATURE_OPROJECT
+//modify for: close bug in user build
 #define CNSS_ASSERT(_condition) do {					\
 		if (!(_condition)) {					\
 			cnss_pr_err("ASSERT at line %d\n",		\
 				    __LINE__);				\
-			WARN_ON(1);					\
+			if ((FACTORY == get_eng_version()) || (AGING == get_eng_version())) {	\
+				BUG();					\
+			} else {					\
+				WARN_ON(1);				\
+			}						\
 		}							\
 	} while (0)
+//#endif /* CONFIG_OPLUS_FEATURE_OPROJECT */
 #endif
 
 #define cnss_fatal_err(_fmt, ...)					\

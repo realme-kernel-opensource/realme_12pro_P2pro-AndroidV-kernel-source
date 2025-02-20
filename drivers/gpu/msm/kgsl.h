@@ -190,6 +190,9 @@ struct kgsl_driver {
 	} stats;
 	unsigned int full_cache_threshold;
 	struct workqueue_struct *workqueue;
+
+	struct kthread_worker RT_worker;
+	struct task_struct *RT_worker_thread;
 	/* @lockless_workqueue: Pointer to a workqueue handler which doesn't hold device mutex */
 	struct workqueue_struct *lockless_workqueue;
 };
@@ -346,6 +349,8 @@ struct kgsl_mem_entry {
 	 * debugfs accounting
 	 */
 	atomic_t map_count;
+	/** @vbo_count: Count how many VBO ranges this entry is mapped in */
+	atomic_t vbo_count;
 };
 
 struct kgsl_device_private;
@@ -375,7 +380,7 @@ struct kgsl_event {
 	void *priv;
 	struct list_head node;
 	unsigned int created;
-	struct work_struct work;
+	struct kthread_work work;
 	int result;
 	struct kgsl_event_group *group;
 };
@@ -643,6 +648,16 @@ kgsl_mem_entry_put(struct kgsl_mem_entry *entry)
 	if (!IS_ERR_OR_NULL(entry))
 		kref_put(&entry->refcount, kgsl_mem_entry_destroy);
 }
+
+/**
+ * kgsl_mem_entry_put_deferred() - Puts refcount and triggers deferred
+ * mem_entry destroy when refcount is the last refcount.
+ * @entry: memory entry to be put.
+ *
+ * Use this to put a memory entry when we don't want to block
+ * the caller while destroying memory entry.
+ */
+void kgsl_mem_entry_put_deferred(struct kgsl_mem_entry *entry);
 
 /*
  * kgsl_addr_range_overlap() - Checks if 2 ranges overlap
